@@ -1,0 +1,200 @@
+// РемонтCRM — Prisma schema
+// Локально используется SQLite для удобства разработки без внешней БД.
+// Для продакшена: смените provider на "postgresql" и укажите DATABASE_URL
+// (пример: postgresql://user:pass@host:5432/remontcrm). Модель данных совместима с обеими БД
+// (enum-поля намеренно объявлены как String — валидация значений на уровне приложения (zod),
+// что упрощает миграцию между СУБД).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Справочники / пользователи ----------
+
+model Branch {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  users        User[]
+  requests     Request[]
+  adSources    AdSource[]
+  adReports    AdDailyReport[]
+  cashTx       CashTransaction[]
+}
+
+// role: master | callcenter | admin | director | regional_director
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  login        String   @unique
+  passwordHash String
+  role         String
+  branchId     String?
+  branch       Branch?  @relation(fields: [branchId], references: [id])
+  createdAt    DateTime @default(now())
+
+  createdRequests   Request[]        @relation("RequestCreatedBy")
+  closedRequests    Request[]        @relation("RequestClosedBy")
+  assignedRequests  Request[]        @relation("RequestAssignedMaster")
+  adSourcesAdded    AdSource[]       @relation("AdSourceCreatedBy")
+  adReportsAdded    AdDailyReport[]  @relation("AdReportCreatedBy")
+  cashTxCreated     CashTransaction[] @relation("CashTxCreatedBy")
+  cashTxAsMaster    CashTransaction[] @relation("CashTxMaster")
+  sentMessages      ChatMessage[]    @relation("MessageSender")
+  receivedMessages  ChatMessage[]    @relation("MessageReceiver")
+  groupMemberships  GroupMember[]
+  auditEntries      AuditLog[]
+}
+
+model ChatGroup {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  members  GroupMember[]
+  messages ChatMessage[]
+}
+
+model GroupMember {
+  id      String    @id @default(cuid())
+  groupId String
+  group   ChatGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  userId  String
+  user    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+}
+
+// ---------- Заявки ----------
+
+// status: waiting | on_the_way | in_progress | in_progress_complex | refused | done
+model Request {
+  id          String   @id @default(cuid())
+  clientName  String
+  phone       String
+  address     String
+  reason      String
+  status      String   @default("waiting")
+
+  sourceId          String?
+  source            AdSource? @relation(fields: [sourceId], references: [id])
+  assignedMasterId  String?
+  assignedMaster    User?     @relation("RequestAssignedMaster", fields: [assignedMasterId], references: [id])
+  visitDatetime     DateTime?
+
+  branchId    String?
+  branch      Branch?  @relation(fields: [branchId], references: [id])
+
+  createdAt   DateTime @default(now())
+  createdById String
+  createdBy   User     @relation("RequestCreatedBy", fields: [createdById], references: [id])
+
+  closedAt    DateTime?
+  closedById  String?
+  closedBy    User?     @relation("RequestClosedBy", fields: [closedById], references: [id])
+  closeStatus String?   // done | refused
+  amountFull     Float?
+  amountRecorded Float?
+  masterPercent  Float?  // % от суммы, идущий мастеру (остальное — записываемая в кассу часть)
+  refusalReason  String?
+
+  updatedAt   DateTime @updatedAt
+
+  documents   RequestDocument[]
+  cashTx      CashTransaction[]
+}
+
+model RequestDocument {
+  id         String   @id @default(cuid())
+  requestId  String
+  request    Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  fileUrl    String
+  uploadedAt DateTime @default(now())
+}
+
+// ---------- Реклама ----------
+
+model AdSource {
+  id        String   @id @default(cuid())
+  name      String
+  type      String   // avito | flyers | stickers | posters | other
+  photoUrl  String?
+  archived  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  createdById String
+  createdBy   User   @relation("AdSourceCreatedBy", fields: [createdById], references: [id])
+  branchId  String?
+  branch    Branch?  @relation(fields: [branchId], references: [id])
+
+  requests  Request[]
+}
+
+model AdDailyReport {
+  id                  String   @id @default(cuid())
+  date                DateTime
+  promotersCount      Int
+  flyersDistributed   Int
+  stickersDistributed Int
+  postersDistributed  Int
+  branchId            String?
+  branch              Branch?  @relation(fields: [branchId], references: [id])
+  createdAt           DateTime @default(now())
+  createdById         String
+  createdBy           User     @relation("AdReportCreatedBy", fields: [createdById], references: [id])
+}
+
+// ---------- Бухгалтерия ----------
+
+// type: income | expense | salary
+model CashTransaction {
+  id        String   @id @default(cuid())
+  type      String
+  amount    Float
+  comment   String?
+  date      DateTime @default(now())
+  requestId String?
+  request   Request? @relation(fields: [requestId], references: [id])
+  masterId  String?
+  master    User?    @relation("CashTxMaster", fields: [masterId], references: [id])
+  branchId  String?
+  branch    Branch?  @relation(fields: [branchId], references: [id])
+  createdAt DateTime @default(now())
+  createdById String
+  createdBy   User   @relation("CashTxCreatedBy", fields: [createdById], references: [id])
+}
+
+// ---------- Чат ----------
+
+model ChatMessage {
+  id         String    @id @default(cuid())
+  senderId   String
+  sender     User      @relation("MessageSender", fields: [senderId], references: [id])
+  receiverId String?
+  receiver   User?     @relation("MessageReceiver", fields: [receiverId], references: [id])
+  groupId    String?
+  group      ChatGroup? @relation(fields: [groupId], references: [id])
+  text       String?
+  attachmentUrl String?
+  createdAt  DateTime  @default(now())
+  readAt     DateTime?
+}
+
+// ---------- Аудит ----------
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  entity    String
+  entityId  String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  action    String
+  oldValue  String?
+  newValue  String?
+  createdAt DateTime @default(now())
+}

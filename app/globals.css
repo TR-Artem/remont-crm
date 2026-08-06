@@ -1,0 +1,138 @@
+@import "tailwindcss";
+@config "../tailwind.config.ts";
+
+:root {
+  --background: #f5f7fb;
+  --foreground: #1c2333;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-inter);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.btn-primary {
+  background: #2f6fed;
+  color: white;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-weight: 600;
+  font-size: 14px;
+  transition: opacity 0.15s;
+}
+.btn-primary:hover { opacity: 0.9; }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-secondary {
+  background: #eef1f6;
+  color: #1c2333;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-weight: 600;
+  font-size: 14px;
+}
+.btn-secondary:hover { background: #e2e5ec; }
+
+.btn-danger {
+  background: #fdeaea;
+  color: #dc2626;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-weight: 600;
+  font-size: 14px;
+}
+.btn-danger:hover { opacity: 0.85; }
+
+.card {
+  background: white;
+  border: 1px solid #e2e5ec;
+  border-radius: 12px;
+}
+
+.input {
+  width: 100%;
+  border: 1px solid #e2e5ec;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 14px;
+  background: white;
+}
+.input:focus {
+  outline: none;
+  border-color: #2f6fed;
+  box-shadow: 0 0 0 3px #e7f0ff;
+}
+.input:disabled {
+  background: #f5f7fb;
+  color: #9aa1b0;
+  cursor: not-allowed;
+}
+
+/* Поле в стиле "значение без рамки" — как в карточке клиента на референсных макетах:
+   рамка появляется только в фокусе, в остальное время выглядит как обычный текст. */
+.field-value {
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 4px 8px;
+  margin: -4px -8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1c2333;
+  background: transparent;
+}
+.field-value:hover:not(:disabled) {
+  background: #f5f7fb;
+}
+.field-value:focus {
+  outline: none;
+  border-color: #2f6fed;
+  background: white;
+  box-shadow: 0 0 0 3px #e7f0ff;
+}
+.field-value:disabled {
+  color: #9aa1b0;
+  cursor: not-allowed;
+}
+
+/* Выпадающий список, оформленный как цветная пилюля (статус / источник рекламы) */
+.pill-select {
+  appearance: none;
+  border: none;
+  border-radius: 9999px;
+  padding: 4px 28px 4px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='3'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+.pill-select:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+label.field-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  margin-bottom: 4px;
+  display: block;
+}
