@@ -29,6 +29,7 @@ export default function EmployeesPage() {
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
   const [showAddBranch, setShowAddBranch] = useState(false);
+  const [editing, setEditing] = useState<EmployeeDTO | null>(null);
 
   const load = useCallback(async () => {
     const [empRes, branchRes] = await Promise.all([fetch("/api/employees"), fetch("/api/branches")]);
@@ -64,6 +65,7 @@ export default function EmployeesPage() {
                   <th className="p-3">Логин</th>
                   <th className="p-3">Роль</th>
                   <th className="p-3">Филиал</th>
+                  <th className="p-3"></th>
                 </tr>
               </thead>
               <tbody>
@@ -73,6 +75,11 @@ export default function EmployeesPage() {
                     <td className="p-3 text-text-secondary">{e.login}</td>
                     <td className="p-3">{ROLE_LABELS[e.role]}</td>
                     <td className="p-3 text-text-secondary">{e.branch?.name ?? "—"}</td>
+                    <td className="p-3">
+                      <button className="text-xs font-medium text-accent" onClick={() => setEditing(e)}>
+                        Изменить
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -114,6 +121,19 @@ export default function EmployeesPage() {
             load();
           }}
         />
+      </Modal>
+
+      <Modal open={!!editing} onClose={() => setEditing(null)} title="Редактирование сотрудника">
+        {editing && (
+          <EmployeeEditForm
+            employee={editing}
+            branches={branches}
+            onDone={() => {
+              setEditing(null);
+              load();
+            }}
+          />
+        )}
       </Modal>
 
       <Modal open={showAddBranch} onClose={() => setShowAddBranch(false)} title="Новый филиал">
@@ -246,6 +266,102 @@ function EmployeeForm({ branches, onDone }: { branches: BranchDTO[]; onDone: () 
       {error && <div className="rounded-btn bg-danger-light px-3 py-2 text-sm text-danger">{error}</div>}
       <button className="btn-primary" onClick={handleSubmit} disabled={saving || !name || !login || password.length < 6}>
         {saving ? "Создаём…" : "Создать сотрудника"}
+      </button>
+    </div>
+  );
+}
+
+function EmployeeEditForm({
+  employee,
+  branches,
+  onDone,
+}: {
+  employee: EmployeeDTO;
+  branches: BranchDTO[];
+  onDone: () => void;
+}) {
+  const [name, setName] = useState(employee.name);
+  const [role, setRole] = useState<Role>(employee.role);
+  const [branchId, setBranchId] = useState(
+    branches.find((b) => b.name === employee.branch?.name)?.id ?? ""
+  );
+  const [password, setPassword] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit() {
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/employees/${employee.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          role,
+          branchId: branchId || null,
+          ...(password ? { password } : {}),
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error?.formErrors?.join(", ") || data.error || "Не удалось сохранить");
+      }
+      onDone();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Ошибка");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <label className="field-label">Имя</label>
+        <input className="input" value={name} onChange={(e) => setName(e.target.value)} />
+      </div>
+      <div>
+        <label className="field-label">Логин</label>
+        <input className="input" value={employee.login} disabled />
+        <p className="mt-1 text-xs text-text-muted">Логин изменить нельзя.</p>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="field-label">Роль</label>
+          <select className="input" value={role} onChange={(e) => setRole(e.target.value as Role)}>
+            {ROLES.map((r) => (
+              <option key={r} value={r}>
+                {ROLE_LABELS[r]}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="field-label">Филиал</label>
+          <select className="input" value={branchId} onChange={(e) => setBranchId(e.target.value)}>
+            <option value="">— без филиала —</option>
+            {branches.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+      <div>
+        <label className="field-label">Новый пароль</label>
+        <input
+          type="text"
+          className="input"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="оставьте пустым, чтобы не менять"
+        />
+      </div>
+      {error && <div className="rounded-btn bg-danger-light px-3 py-2 text-sm text-danger">{error}</div>}
+      <button className="btn-primary" onClick={handleSubmit} disabled={saving || !name || (password.length > 0 && password.length < 6)}>
+        {saving ? "Сохраняем…" : "Сохранить"}
       </button>
     </div>
   );

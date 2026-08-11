@@ -65,10 +65,6 @@ export default function LoginPage() {
             {loading ? "Входим…" : "Войти"}
           </button>
         </form>
-
-        <p className="mt-4 text-center text-xs text-text-muted">
-          Демо-доступы: director / regional / admin / callcenter / master1 — пароль password123
-        </p>
       </div>
     </div>
   );

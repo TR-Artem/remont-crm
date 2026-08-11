@@ -24,7 +24,7 @@ export default async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  const token = await getToken({ req, secret: process.env.AUTH_SECRET });
+  const token = await getToken({ req, secret: process.env.AUTH_SECRET, secureCookie: true });
   if (!token) {
     const url = req.nextUrl.clone();
     url.pathname = "/login";

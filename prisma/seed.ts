@@ -10,7 +10,7 @@ async function main() {
   const password = await bcrypt.hash("password123", 10);
 
   const director = await prisma.user.create({
-    data: { name: "Иван Директоров", login: "director", passwordHash: password, role: "director" },
+    data: { name: "Кирилл Директор", login: "director", passwordHash: password, role: "director" },
   });
   const regional = await prisma.user.create({
     data: {
@@ -22,7 +22,7 @@ async function main() {
     },
   });
   const admin = await prisma.user.create({
-    data: { name: "Пётр Админов", login: "admin", passwordHash: password, role: "admin", branchId: branch.id },
+    data: { name: "Света Админ", login: "admin", passwordHash: password, role: "admin", branchId: branch.id },
   });
   const callcenter = await prisma.user.create({
     data: {

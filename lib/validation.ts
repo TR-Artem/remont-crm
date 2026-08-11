@@ -92,6 +92,13 @@ export const createUserSchema = z.object({
   branchId: z.string().optional().nullable(),
 });
 
+export const updateUserSchema = z.object({
+  name: z.string().min(1).optional(),
+  role: z.enum(["master", "callcenter", "admin", "director", "regional_director"]).optional(),
+  branchId: z.string().nullable().optional(),
+  password: z.string().min(6).optional(), // необязательно — сброс пароля, если заполнено
+});
+
 export const chatMessageSchema = z.object({
   text: z.string().optional(),
   attachmentUrl: z.string().optional(),
