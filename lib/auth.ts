@@ -2,36 +2,13 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { authConfig } from "@/lib/auth.config";
 import type { Role } from "@/lib/domain";
 
-declare module "next-auth" {
-  interface User {
-    role: Role;
-    branchId: string | null;
-  }
-  interface Session {
-    user: {
-      id: string;
-      name: string;
-      role: Role;
-      branchId: string | null;
-    };
-  }
-}
-
-// Примечание: аугментация "next-auth/jwt" (реэкспорт из @auth/core/jwt) в TS
-// с moduleResolution "bundler" не резолвится надёжно — расширяем токен через
-// точечные приведения типов в колбэках ниже вместо augmentation-блока.
-interface AppToken {
-  id?: string;
-  role?: Role;
-  branchId?: string | null;
-  [key: string]: unknown;
-}
-
+// Полная конфигурация — с провайдером и обращением к БД. Используется только в
+// Node.js-рантайме (API-роуты, server actions), НЕ в middleware.ts (см. auth.config.ts).
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  session: { strategy: "jwt" },
-  pages: { signIn: "/login" },
+  ...authConfig,
   providers: [
     Credentials({
       name: "credentials",
@@ -59,22 +36,4 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
     }),
   ],
-  callbacks: {
-    async jwt({ token, user }) {
-      const t = token as AppToken;
-      if (user) {
-        t.id = user.id;
-        t.role = user.role;
-        t.branchId = user.branchId;
-      }
-      return t;
-    },
-    async session({ session, token }) {
-      const t = token as AppToken;
-      session.user.id = t.id ?? "";
-      session.user.role = (t.role ?? "master") as Role;
-      session.user.branchId = t.branchId ?? null;
-      return session;
-    },
-  },
 });

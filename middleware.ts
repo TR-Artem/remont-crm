@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import NextAuth from "next-auth";
+import { authConfig } from "@/lib/auth.config";
 import { sectionAllowed, type Role } from "@/lib/domain";
+
+// Собственный, "лёгкий" экземпляр auth() для Edge Runtime — без провайдеров/Prisma/bcrypt,
+// только чтение JWT-сессии. Полный auth() с провайдером — в lib/auth.ts (Node.js-рантайм).
+const { auth } = NextAuth(authConfig);
 
 const PUBLIC_PATHS = ["/login"];
 
