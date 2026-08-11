@@ -1,15 +1,14 @@
-import { NextResponse } from "next/server";
-import NextAuth from "next-auth";
-import { authConfig } from "@/lib/auth.config";
+import { NextResponse, type NextRequest } from "next/server";
+import { getToken } from "next-auth/jwt";
 import { sectionAllowed, type Role } from "@/lib/domain";
 
-// Собственный, "лёгкий" экземпляр auth() для Edge Runtime — без провайдеров/Prisma/bcrypt,
-// только чтение JWT-сессии. Полный auth() с провайдером — в lib/auth.ts (Node.js-рантайм).
-const { auth } = NextAuth(authConfig);
-
+// Читаем JWT напрямую через getToken(), а не через полноценный NextAuth()/auth() —
+// это заметно легче для Edge Function (у неё жёсткий лимит размера, 1 МБ на бесплатном
+// тарифе Vercel). Даже "пустой" NextAuth() тянет за собой всю инфраструктуру роутинга,
+// CSRF, парсинга cookie и т.д. — getToken() лишь расшифровывает JWT из cookie, без этого.
 const PUBLIC_PATHS = ["/login"];
 
-export default auth((req) => {
+export default async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // API-роуты никогда не должны получать редирект на HTML-страницу логина —
@@ -25,15 +24,15 @@ export default auth((req) => {
     return NextResponse.next();
   }
 
-  const session = req.auth;
-  if (!session?.user) {
+  const token = await getToken({ req, secret: process.env.AUTH_SECRET });
+  if (!token) {
     const url = req.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
   }
 
-  const role = session.user.role as Role;
-  if (pathname === "/") {
+  const role = token.role as Role | undefined;
+  if (pathname === "/" || !role) {
     return NextResponse.next();
   }
 
@@ -44,7 +43,7 @@ export default auth((req) => {
   }
 
   return NextResponse.next();
-});
+}
 
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico|uploads).*)"],
