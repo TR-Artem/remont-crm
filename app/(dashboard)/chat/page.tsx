@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useSession } from "next-auth/react";
 import Modal from "@/components/Modal";
 import { ROLE_LABELS, type Role } from "@/lib/domain";
+import { uploadFile } from "@/lib/upload-client";
 
 interface UserDTO {
   id: string;
@@ -82,11 +83,12 @@ export default function ChatPage() {
 
   async function handleAttach(file: File) {
     if (!selection) return;
-    const fd = new FormData();
-    fd.append("file", file);
-    const uploadRes = await fetch("/api/upload", { method: "POST", body: fd });
-    if (!uploadRes.ok) return;
-    const { url } = await uploadRes.json();
+    let url: string;
+    try {
+      url = await uploadFile(file);
+    } catch {
+      return;
+    }
     const payload =
       selection.type === "user" ? { attachmentUrl: url, receiverId: selection.id } : { attachmentUrl: url, groupId: selection.id };
     await fetch("/api/chat/messages", {

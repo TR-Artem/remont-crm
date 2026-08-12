@@ -1,36 +1,38 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireSession, forbiddenResponse, ForbiddenError } from "@/lib/rbac";
-import { put } from "@vercel/blob";
-import { randomUUID } from "crypto";
+import { requireSession, ForbiddenError } from "@/lib/rbac";
+import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 
-// Загрузка в Vercel Blob — облачное хранилище файлов от Vercel.
-// Локальная файловая система на serverless-хостингах (Vercel) только для чтения во время
-// выполнения, писать туда "насовсем" нельзя, поэтому обычная папка /public/uploads не работает
-// в проде (только при локальной разработке). Чтобы это заработало, в панели Vercel нужно
-// один раз подключить Storage → Blob — тогда переменная BLOB_READ_WRITE_TOKEN появится
-// автоматически (её не нужно вписывать в .env вручную).
+// Файл здесь НЕ загружается через тело этого запроса — Vercel ограничивает тело запроса
+// serverless-функции 4.5 МБ, а фото с телефона обычно весят больше (413 Payload Too Large).
+// Вместо этого браузер грузит файл напрямую в Vercel Blob, а этот роут только выдаёт
+// одноразовый авторизованный токен на загрузку (см. lib/upload-client.ts на фронте).
 export async function POST(req: NextRequest) {
+  const body = (await req.json()) as HandleUploadBody;
+
   try {
     await requireSession();
 
-    const formData = await req.formData();
-    const file = formData.get("file") as File | null;
-    if (!file) {
-      return NextResponse.json({ error: "Файл не передан" }, { status: 400 });
-    }
-
-    const ext = file.name.includes(".") ? file.name.split(".").pop() : "";
-    const filename = `uploads/${randomUUID()}${ext ? `.${ext}` : ""}`;
-
-    const blob = await put(filename, file, {
-      access: "public",
-      addRandomSuffix: false,
+    const jsonResponse = await handleUpload({
+      body,
+      request: req,
+      onBeforeGenerateToken: async () => {
+        return {
+          allowedContentTypes: ["image/jpeg", "image/png", "image/webp", "image/gif", "image/heic", "video/mp4", "video/quicktime"],
+          addRandomSuffix: true,
+          maximumSizeInBytes: 25 * 1024 * 1024, // 25 МБ — с запасом под фото с телефона
+        };
+      },
+      onUploadCompleted: async () => {
+        // Здесь можно было бы залогировать факт загрузки — сейчас не требуется.
+      },
     });
 
-    return NextResponse.json({ url: blob.url });
+    return NextResponse.json(jsonResponse);
   } catch (e) {
-    if (e instanceof ForbiddenError) return forbiddenResponse(e.message);
+    if (e instanceof ForbiddenError) {
+      return NextResponse.json({ error: e.message }, { status: 403 });
+    }
     console.error(e);
-    return NextResponse.json({ error: "Внутренняя ошибка" }, { status: 500 });
+    return NextResponse.json({ error: e instanceof Error ? e.message : "Внутренняя ошибка" }, { status: 400 });
   }
 }

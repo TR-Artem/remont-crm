@@ -6,6 +6,7 @@ import PageHeader from "@/components/PageHeader";
 import Modal from "@/components/Modal";
 import { AD_TYPES, AD_TYPE_LABELS, AD_TYPE_ICONS, AD_TYPE_COLORS, adTypeChannel, type AdType, type Role } from "@/lib/domain";
 import type { AdSourceDTO } from "@/types";
+import { uploadFile } from "@/lib/upload-client";
 
 export default function AdSourcesPage() {
   const { data: session } = useSession();
@@ -130,12 +131,11 @@ function AdSourceForm({ source, onDone }: { source?: AdSourceDTO; onDone: () => 
 
   async function handleFile(file: File) {
     setUploading(true);
-    const fd = new FormData();
-    fd.append("file", file);
-    const res = await fetch("/api/upload", { method: "POST", body: fd });
-    if (res.ok) {
-      const data = await res.json();
-      setPhotoUrl(data.url);
+    try {
+      const url = await uploadFile(file);
+      setPhotoUrl(url);
+    } catch {
+      // молча игнорируем — поле фото необязательное, форма всё равно сохранится без него
     }
     setUploading(false);
   }

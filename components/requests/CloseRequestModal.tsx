@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { RequestDTO } from "@/types";
 import { REFUSAL_REASONS } from "@/lib/domain";
+import { uploadFile } from "@/lib/upload-client";
 
 const DEFAULT_MASTER_PERCENT = 50;
 
@@ -36,12 +37,8 @@ export default function CloseRequestModal({
   async function uploadFiles(): Promise<string[]> {
     const urls: string[] = [];
     for (const file of files) {
-      const fd = new FormData();
-      fd.append("file", file);
-      const res = await fetch("/api/upload", { method: "POST", body: fd });
-      if (!res.ok) throw new Error("Не удалось загрузить фото");
-      const data = await res.json();
-      urls.push(data.url);
+      const url = await uploadFile(file);
+      urls.push(url);
     }
     return urls;
   }
