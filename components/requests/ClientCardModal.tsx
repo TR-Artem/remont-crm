@@ -302,6 +302,37 @@ export default function ClientCardModal({
         </div>
       </div>
 
+      {isClosed && (
+        <div className="rounded-btn bg-surface p-3 text-sm">
+          <p className="field-label mb-2">Закрытие заявки</p>
+          {request!.closeStatus === "refused" ? (
+            <p className="text-text-secondary">Причина отказа: {request!.refusalReason ?? "не указана"}</p>
+          ) : (
+            <div className="flex flex-wrap gap-4 text-text-secondary">
+              <span>Сумма: {request!.amountFull?.toLocaleString("ru-RU")} ₽</span>
+              <span>В кассу: {request!.amountRecorded?.toLocaleString("ru-RU")} ₽</span>
+            </div>
+          )}
+          {request!.documents.length > 0 && (
+            <div className="mt-3">
+              <p className="field-label mb-1">Фото документов</p>
+              <div className="flex flex-wrap gap-2">
+                {request!.documents.map((d) => (
+                  <a key={d.id} href={d.fileUrl} target="_blank" rel="noopener noreferrer">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={d.fileUrl}
+                      alt="Документ"
+                      className="h-20 w-20 rounded-btn border border-surface-border object-cover transition-opacity hover:opacity-80"
+                    />
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {error && <div className="rounded-btn bg-danger-light px-3 py-2 text-sm text-danger">{error}</div>}
 
       <div className="flex flex-wrap gap-2 pt-1">

@@ -11,6 +11,7 @@
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
+    "db:update-passwords": "tsx prisma/update-passwords.ts",
     "db:setup": "npm run db:generate && npm run db:push && npm run db:seed"
   },
   "prisma": {
@@ -19,6 +20,7 @@
   "dependencies": {
     "@hello-pangea/dnd": "^18.0.1",
     "@prisma/client": "^6.19.3",
+    "@vercel/blob": "^2.8.0",
     "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
     "date-fns": "^4.4.0",

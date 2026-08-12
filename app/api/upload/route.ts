@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireSession, forbiddenResponse, ForbiddenError } from "@/lib/rbac";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
+import { put } from "@vercel/blob";
 import { randomUUID } from "crypto";
 
-// В продакшене замените на загрузку в S3-совместимое хранилище.
-// Здесь — локальная папка /public/uploads, путь сохраняется в БД как fileUrl/photoUrl.
+// Загрузка в Vercel Blob — облачное хранилище файлов от Vercel.
+// Локальная файловая система на serverless-хостингах (Vercel) только для чтения во время
+// выполнения, писать туда "насовсем" нельзя, поэтому обычная папка /public/uploads не работает
+// в проде (только при локальной разработке). Чтобы это заработало, в панели Vercel нужно
+// один раз подключить Storage → Blob — тогда переменная BLOB_READ_WRITE_TOKEN появится
+// автоматически (её не нужно вписывать в .env вручную).
 export async function POST(req: NextRequest) {
   try {
     await requireSession();
@@ -16,17 +19,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Файл не передан" }, { status: 400 });
     }
 
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
+    const ext = file.name.includes(".") ? file.name.split(".").pop() : "";
+    const filename = `uploads/${randomUUID()}${ext ? `.${ext}` : ""}`;
 
-    const uploadsDir = path.join(process.cwd(), "public", "uploads");
-    await mkdir(uploadsDir, { recursive: true });
+    const blob = await put(filename, file, {
+      access: "public",
+      addRandomSuffix: false,
+    });
 
-    const ext = path.extname(file.name) || "";
-    const filename = `${randomUUID()}${ext}`;
-    await writeFile(path.join(uploadsDir, filename), buffer);
-
-    return NextResponse.json({ url: `/uploads/${filename}` });
+    return NextResponse.json({ url: blob.url });
   } catch (e) {
     if (e instanceof ForbiddenError) return forbiddenResponse(e.message);
     console.error(e);

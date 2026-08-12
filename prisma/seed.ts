@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { DEMO_PASSWORDS } from "./demo-passwords";
 
 const prisma = new PrismaClient();
 
@@ -7,37 +8,58 @@ async function main() {
   const branch = await prisma.branch.create({ data: { name: "Москва (центр)" } });
   const branch2 = await prisma.branch.create({ data: { name: "Санкт-Петербург" } });
 
-  const password = await bcrypt.hash("password123", 10);
-
   const director = await prisma.user.create({
-    data: { name: "Кирилл Директор", login: "director", passwordHash: password, role: "director" },
+    data: {
+      name: "Кирилл Директор",
+      login: "director",
+      passwordHash: await bcrypt.hash(DEMO_PASSWORDS.director, 10),
+      role: "director",
+    },
   });
   const regional = await prisma.user.create({
     data: {
-      name: "Ольга Региональная",
+      name: "Руслан Региональнал",
       login: "regional",
-      passwordHash: password,
+      passwordHash: await bcrypt.hash(DEMO_PASSWORDS.regional, 10),
       role: "regional_director",
       branchId: branch.id,
     },
   });
   const admin = await prisma.user.create({
-    data: { name: "Света Админ", login: "admin", passwordHash: password, role: "admin", branchId: branch.id },
+    data: {
+      name: "Света Админ",
+      login: "admin",
+      passwordHash: await bcrypt.hash(DEMO_PASSWORDS.admin, 10),
+      role: "admin",
+      branchId: branch.id,
+    },
   });
   const callcenter = await prisma.user.create({
     data: {
-      name: "Мария Колцентрова",
+      name: "Мария Колцентр",
       login: "callcenter",
-      passwordHash: password,
+      passwordHash: await bcrypt.hash(DEMO_PASSWORDS.callcenter, 10),
       role: "callcenter",
       branchId: branch.id,
     },
   });
   const master1 = await prisma.user.create({
-    data: { name: "Олег Мастеров", login: "master1", passwordHash: password, role: "master", branchId: branch.id },
+    data: {
+      name: "Олег Мастер",
+      login: "master1",
+      passwordHash: await bcrypt.hash(DEMO_PASSWORDS.master1, 10),
+      role: "master",
+      branchId: branch.id,
+    },
   });
   const master2 = await prisma.user.create({
-    data: { name: "Сергей Ключников", login: "master2", passwordHash: password, role: "master", branchId: branch.id },
+    data: {
+      name: "Сергей Ключников",
+      login: "master2",
+      passwordHash: await bcrypt.hash(DEMO_PASSWORDS.master2, 10),
+      role: "master",
+      branchId: branch.id,
+    },
   });
 
   const source1 = await prisma.adSource.create({
@@ -119,7 +141,7 @@ async function main() {
     },
   });
 
-  console.log("Seed complete. Demo logins (password: password123):");
+  console.log("Seed complete. Demo logins — пароли см. prisma/demo-passwords.ts:");
   console.log("director / regional / admin / callcenter / master1 / master2");
   console.log({ branch2: branch2.id });
 }

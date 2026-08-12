@@ -7,3 +7,4 @@ public/uploads/*
 !public/uploads/.gitkeep
 .vercel
 .env*
+.env.local
