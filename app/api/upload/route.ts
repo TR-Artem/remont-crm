@@ -1,38 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireSession, ForbiddenError } from "@/lib/rbac";
-import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
+import { requireSession, forbiddenResponse, ForbiddenError } from "@/lib/rbac";
+import { put } from "@vercel/blob";
 
-// Файл здесь НЕ загружается через тело этого запроса — Vercel ограничивает тело запроса
-// serverless-функции 4.5 МБ, а фото с телефона обычно весят больше (413 Payload Too Large).
-// Вместо этого браузер грузит файл напрямую в Vercel Blob, а этот роут только выдаёт
-// одноразовый авторизованный токен на загрузку (см. lib/upload-client.ts на фронте).
+// Файл приходит от клиента уже сжатым (см. lib/upload-client.ts), поэтому укладывается
+// в лимит тела serverless-функции (4.5 МБ у Vercel). Сама загрузка в Vercel Blob идёт
+// отсюда — с сервера Vercel к самому Vercel, по их внутренней сети, а не через интернет
+// пользователя. Это осознанный выбор вместо "прямой загрузки из браузера": в некоторых
+// сетях/регионах устройство пользователя не может напрямую достучаться до API Vercel Blob.
 export async function POST(req: NextRequest) {
-  const body = (await req.json()) as HandleUploadBody;
-
   try {
     await requireSession();
 
-    const jsonResponse = await handleUpload({
-      body,
-      request: req,
-      onBeforeGenerateToken: async () => {
-        return {
-          allowedContentTypes: ["image/jpeg", "image/png", "image/webp", "image/gif", "image/heic", "video/mp4", "video/quicktime"],
-          addRandomSuffix: true,
-          maximumSizeInBytes: 25 * 1024 * 1024, // 25 МБ — с запасом под фото с телефона
-        };
-      },
-      onUploadCompleted: async () => {
-        // Здесь можно было бы залогировать факт загрузки — сейчас не требуется.
-      },
+    const formData = await req.formData();
+    const file = formData.get("file") as File | null;
+    if (!file) {
+      return NextResponse.json({ error: "Файл не передан" }, { status: 400 });
+    }
+
+    const blob = await put(`uploads/${file.name}`, file, {
+      access: "public",
+      addRandomSuffix: true,
     });
 
-    return NextResponse.json(jsonResponse);
+    return NextResponse.json({ url: blob.url });
   } catch (e) {
-    if (e instanceof ForbiddenError) {
-      return NextResponse.json({ error: e.message }, { status: 403 });
-    }
+    if (e instanceof ForbiddenError) return forbiddenResponse(e.message);
     console.error(e);
-    return NextResponse.json({ error: e instanceof Error ? e.message : "Внутренняя ошибка" }, { status: 400 });
+    return NextResponse.json({ error: e instanceof Error ? e.message : "Внутренняя ошибка" }, { status: 500 });
   }
 }
