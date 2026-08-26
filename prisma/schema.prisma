@@ -141,8 +141,11 @@ model AdDailyReport {
   id                  String   @id @default(cuid())
   date                DateTime
   promotersCount      Int
+  flyersIssued        Int      @default(0)
   flyersDistributed   Int
+  stickersIssued      Int      @default(0)
   stickersDistributed Int
+  postersIssued       Int      @default(0)
   postersDistributed  Int
   branchId            String?
   branch              Branch?  @relation(fields: [branchId], references: [id])

@@ -103,7 +103,7 @@ export default function Sidebar({ role, userName }: { role: Role; userName: stri
       )}
 
       {/* Desktop sidebar */}
-      <aside className="hidden w-60 shrink-0 flex-col bg-sidebar md:flex">{content}</aside>
+      <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col bg-sidebar md:flex">{content}</aside>
     </>
   );
 }

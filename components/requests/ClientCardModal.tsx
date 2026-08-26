@@ -33,6 +33,7 @@ export default function ClientCardModal({
   onClose,
   onSaved,
   onRequestCloseFlow,
+  onRequestDelete,
 }: {
   request: RequestDTO | null; // null = создание новой заявки
   sources: AdSourceDTO[];
@@ -41,6 +42,7 @@ export default function ClientCardModal({
   onClose: () => void;
   onSaved: () => void;
   onRequestCloseFlow: (req: RequestDTO) => void;
+  onRequestDelete: (req: RequestDTO) => void;
 }) {
   const isCreate = request === null;
   const [clientName, setClientName] = useState(request?.clientName ?? "");
@@ -119,31 +121,12 @@ export default function ClientCardModal({
     }
   }
 
-  async function handleMoveNext() {
-    if (!request) return;
-    const idx = NON_CLOSING_STATUSES.indexOf(request.status as (typeof NON_CLOSING_STATUSES)[number]);
-    if (idx === -1 || idx === NON_CLOSING_STATUSES.length - 1) return;
-    const next = NON_CLOSING_STATUSES[idx + 1];
-    setSaving(true);
-    setError(null);
-    try {
-      const res = await fetch(`/api/requests/${request.id}/status`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: next }),
-      });
-      if (!res.ok) throw new Error((await res.json()).error || "Не удалось изменить статус");
-      onSaved();
-      onClose();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Ошибка");
-    } finally {
-      setSaving(false);
-    }
-  }
-
   const canClose = !isCreate && !isClosed && ["admin", "director", "regional_director"].includes(role);
   const canMoveStatus = !isCreate && !isClosed && ["callcenter", "admin", "director", "regional_director"].includes(role);
+  const canDelete =
+    !isCreate &&
+    !isClosed &&
+    (role === "director" || role === "regional_director" || (role === "callcenter" && basicFieldsEditable));
   const closeEditWindowOpen =
     isClosed &&
     request?.closedAt &&
@@ -339,11 +322,6 @@ export default function ClientCardModal({
         <button className="btn-primary" onClick={handleSave} disabled={saving}>
           {saving ? "Сохраняем…" : "Сохранить"}
         </button>
-        {canMoveStatus && (
-          <button className="btn-secondary" onClick={handleMoveNext} disabled={saving}>
-            Передвинуть →
-          </button>
-        )}
         {canClose && (
           <button className="btn-danger" onClick={() => onRequestCloseFlow(request!)}>
             Закрыть заявку
@@ -352,6 +330,11 @@ export default function ClientCardModal({
         {closeEditWindowOpen && (
           <button className="btn-secondary" onClick={() => onRequestCloseFlow(request!)}>
             Изменить закрытие
+          </button>
+        )}
+        {canDelete && (
+          <button className="btn-danger" onClick={() => onRequestDelete(request!)}>
+            Удалить заявку
           </button>
         )}
       </div>

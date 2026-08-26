@@ -55,10 +55,22 @@ export default function RequestsPage() {
     }
   }
 
+  async function handleDelete(req: RequestDTO) {
+    if (!confirm(`Удалить заявку «${req.clientName}»? Это действие необратимо.`)) return;
+    const res = await fetch(`/api/requests/${req.id}`, { method: "DELETE" });
+    if (res.ok) {
+      setSelected(null);
+      load();
+    } else {
+      const data = await res.json().catch(() => null);
+      alert(data?.error || "Не удалось удалить заявку");
+    }
+  }
+
   if (!role) return null;
 
-  const canCreate = ["callcenter", "director", "regional_director"].includes(role);
-  const canMoveStatus = ["callcenter", "admin", "director", "regional_director"].includes(role);
+  const canCreate = ["callcenter", "admin", "director", "regional_director"].includes(role);
+  const canMoveStatus = [ "admin", "director", "regional_director"].includes(role);
 
   return (
     <div>
@@ -102,6 +114,7 @@ export default function RequestsPage() {
           onClose={() => setShowCreate(false)}
           onSaved={load}
           onRequestCloseFlow={() => {}}
+          onRequestDelete={() => {}}
         />
       </Modal>
 
@@ -118,6 +131,7 @@ export default function RequestsPage() {
               setSelected(null);
               setCloseFlow({ req });
             }}
+            onRequestDelete={handleDelete}
           />
         )}
       </Modal>

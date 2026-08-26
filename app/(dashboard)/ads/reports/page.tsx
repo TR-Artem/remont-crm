@@ -11,8 +11,11 @@ interface ReportDTO {
   id: string;
   date: string;
   promotersCount: number;
+  flyersIssued: number;
   flyersDistributed: number;
+  stickersIssued: number;
   stickersDistributed: number;
+  postersIssued: number;
   postersDistributed: number;
 }
 
@@ -71,11 +74,17 @@ export default function AdReportsPage() {
       ) : (
         <div className="space-y-4">
           {reports.length > 0 && (
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-7">
               <div className="card p-4">
                 <p className="text-xs font-medium uppercase tracking-wide text-text-secondary">Промоутеро-дней</p>
                 <p className="mt-1 text-xl font-semibold text-text">
                   {reports.reduce((s, r) => s + r.promotersCount, 0)}
+                </p>
+              </div>
+              <div className="card p-4" style={{ backgroundColor: "#E7F0FF", borderColor: "transparent" }}>
+                <p className="text-xs font-medium uppercase tracking-wide text-accent">Выдано листовок</p>
+                <p className="mt-1 text-xl font-semibold text-accent">
+                  {reports.reduce((s, r) => s + r.flyersIssued, 0)}
                 </p>
               </div>
               <div className="card p-4" style={{ backgroundColor: "#FFF4DE", borderColor: "transparent" }}>
@@ -84,12 +93,24 @@ export default function AdReportsPage() {
                   {reports.reduce((s, r) => s + r.flyersDistributed, 0)}
                 </p>
               </div>
+              <div className="card p-4" style={{ backgroundColor: "#E7F0FF", borderColor: "transparent" }}>
+                <p className="text-xs font-medium uppercase tracking-wide text-accent">Выдано наклеек</p>
+                <p className="mt-1 text-xl font-semibold text-accent">
+                  {reports.reduce((s, r) => s + r.stickersIssued, 0)}
+                </p>
+              </div>
               <div className="card p-4" style={{ backgroundColor: "#E9E4FF", borderColor: "transparent" }}>
                 <p className="text-xs font-medium uppercase tracking-wide" style={{ color: "#6D3FE0" }}>
                   Разнесено наклеек
                 </p>
                 <p className="mt-1 text-xl font-semibold" style={{ color: "#6D3FE0" }}>
                   {reports.reduce((s, r) => s + r.stickersDistributed, 0)}
+                </p>
+              </div>
+              <div className="card p-4" style={{ backgroundColor: "#E7F0FF", borderColor: "transparent" }}>
+                <p className="text-xs font-medium uppercase tracking-wide text-accent">Выдано расклеек</p>
+                <p className="mt-1 text-xl font-semibold text-accent">
+                  {reports.reduce((s, r) => s + r.postersIssued, 0)}
                 </p>
               </div>
               <div className="card p-4" style={{ backgroundColor: "#E5F8EE", borderColor: "transparent" }}>
@@ -107,9 +128,12 @@ export default function AdReportsPage() {
               <tr className="border-b border-surface-border text-left text-text-secondary">
                 <th className="p-3">Дата</th>
                 <th className="p-3">Промоутеров</th>
-                <th className="p-3">Листовок</th>
-                <th className="p-3">Наклеек</th>
-                <th className="p-3">Расклеек</th>
+                <th className="p-3">Выдано листовок</th>
+                <th className="p-3">Разнесено листовок</th>
+                <th className="p-3">Выдано наклеек</th>
+                <th className="p-3">Разнесено наклеек</th>
+                <th className="p-3">Выдано расклеек</th>
+                <th className="p-3">Разнесено расклеек</th>
                 <th className="p-3"></th>
               </tr>
             </thead>
@@ -118,8 +142,11 @@ export default function AdReportsPage() {
                 <tr key={r.id} className="border-b border-surface-border last:border-0">
                   <td className="p-3">{new Date(r.date).toLocaleDateString("ru-RU")}</td>
                   <td className="p-3">{r.promotersCount}</td>
+                  <td className="p-3">{r.flyersIssued}</td>
                   <td className="p-3">{r.flyersDistributed}</td>
+                  <td className="p-3">{r.stickersIssued}</td>
                   <td className="p-3">{r.stickersDistributed}</td>
+                  <td className="p-3">{r.postersIssued}</td>
                   <td className="p-3">{r.postersDistributed}</td>
                   <td className="p-3">
                     <button className="text-accent text-xs font-medium" onClick={() => setEditing(r)}>
@@ -130,7 +157,7 @@ export default function AdReportsPage() {
               ))}
               {reports.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="p-6 text-center text-text-muted">
+                  <td colSpan={9} className="p-6 text-center text-text-muted">
                     Отчётов пока нет
                   </td>
                 </tr>
@@ -165,11 +192,20 @@ export default function AdReportsPage() {
   );
 }
 
+/** Число всегда выделяется целиком при фокусе — чтобы ввод новой цифры сразу заменял
+ * стоящий по умолчанию 0, а не дописывался к нему (напр. "0" + "5" -> "05"). */
+function selectOnFocus(e: React.FocusEvent<HTMLInputElement>) {
+  e.target.select();
+}
+
 function ReportForm({ report, onDone }: { report?: ReportDTO; onDone: () => void }) {
   const [date, setDate] = useState(report?.date.slice(0, 10) ?? new Date().toISOString().slice(0, 10));
   const [promotersCount, setPromotersCount] = useState(report?.promotersCount ?? 0);
+  const [flyersIssued, setFlyersIssued] = useState(report?.flyersIssued ?? 0);
   const [flyers, setFlyers] = useState(report?.flyersDistributed ?? 0);
+  const [stickersIssued, setStickersIssued] = useState(report?.stickersIssued ?? 0);
   const [stickers, setStickers] = useState(report?.stickersDistributed ?? 0);
+  const [postersIssued, setPostersIssued] = useState(report?.postersIssued ?? 0);
   const [posters, setPosters] = useState(report?.postersDistributed ?? 0);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -184,8 +220,11 @@ function ReportForm({ report, onDone }: { report?: ReportDTO; onDone: () => void
         body: JSON.stringify({
           date,
           promotersCount,
+          flyersIssued,
           flyersDistributed: flyers,
+          stickersIssued,
           stickersDistributed: stickers,
+          postersIssued,
           postersDistributed: posters,
         }),
       });
@@ -204,22 +243,84 @@ function ReportForm({ report, onDone }: { report?: ReportDTO; onDone: () => void
         <label className="field-label">Дата отчёта</label>
         <input type="date" className="input" value={date} onChange={(e) => setDate(e.target.value)} />
       </div>
+      <div>
+        <label className="field-label">Промоутеров работало</label>
+        <input
+          type="number"
+          min={0}
+          className="input"
+          value={promotersCount}
+          onFocus={selectOnFocus}
+          onChange={(e) => setPromotersCount(Number(e.target.value))}
+        />
+      </div>
+
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="field-label">Промоутеров работало</label>
-          <input type="number" min={0} className="input" value={promotersCount} onChange={(e) => setPromotersCount(Number(e.target.value))} />
+          <label className="field-label">Выдано листовок</label>
+          <input
+            type="number"
+            min={0}
+            className="input"
+            value={flyersIssued}
+            onFocus={selectOnFocus}
+            onChange={(e) => setFlyersIssued(Number(e.target.value))}
+          />
         </div>
         <div>
           <label className="field-label">Разнесено листовок</label>
-          <input type="number" min={0} className="input" value={flyers} onChange={(e) => setFlyers(Number(e.target.value))} />
+          <input
+            type="number"
+            min={0}
+            className="input"
+            value={flyers}
+            onFocus={selectOnFocus}
+            onChange={(e) => setFlyers(Number(e.target.value))}
+          />
+        </div>
+        <div>
+          <label className="field-label">Выдано наклеек</label>
+          <input
+            type="number"
+            min={0}
+            className="input"
+            value={stickersIssued}
+            onFocus={selectOnFocus}
+            onChange={(e) => setStickersIssued(Number(e.target.value))}
+          />
         </div>
         <div>
           <label className="field-label">Разнесено наклеек</label>
-          <input type="number" min={0} className="input" value={stickers} onChange={(e) => setStickers(Number(e.target.value))} />
+          <input
+            type="number"
+            min={0}
+            className="input"
+            value={stickers}
+            onFocus={selectOnFocus}
+            onChange={(e) => setStickers(Number(e.target.value))}
+          />
+        </div>
+        <div>
+          <label className="field-label">Выдано расклеек</label>
+          <input
+            type="number"
+            min={0}
+            className="input"
+            value={postersIssued}
+            onFocus={selectOnFocus}
+            onChange={(e) => setPostersIssued(Number(e.target.value))}
+          />
         </div>
         <div>
           <label className="field-label">Разнесено расклеек</label>
-          <input type="number" min={0} className="input" value={posters} onChange={(e) => setPosters(Number(e.target.value))} />
+          <input
+            type="number"
+            min={0}
+            className="input"
+            value={posters}
+            onFocus={selectOnFocus}
+            onChange={(e) => setPosters(Number(e.target.value))}
+          />
         </div>
       </div>
       {error && <div className="rounded-btn bg-danger-light px-3 py-2 text-sm text-danger">{error}</div>}

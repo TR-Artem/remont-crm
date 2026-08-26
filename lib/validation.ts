@@ -69,8 +69,11 @@ export const adSourceSchema = z.object({
 export const adReportSchema = z.object({
   date: z.string(),
   promotersCount: z.number().int().nonnegative(),
+  flyersIssued: z.number().int().nonnegative(),
   flyersDistributed: z.number().int().nonnegative(),
+  stickersIssued: z.number().int().nonnegative(),
   stickersDistributed: z.number().int().nonnegative(),
+  postersIssued: z.number().int().nonnegative(),
   postersDistributed: z.number().int().nonnegative(),
   branchId: z.string().optional().nullable(),
 });

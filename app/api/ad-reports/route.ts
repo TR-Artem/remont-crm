@@ -52,8 +52,11 @@ export async function POST(req: NextRequest) {
       data: {
         date: new Date(parsed.data.date),
         promotersCount: parsed.data.promotersCount,
+        flyersIssued: parsed.data.flyersIssued,
         flyersDistributed: parsed.data.flyersDistributed,
+        stickersIssued: parsed.data.stickersIssued,
         stickersDistributed: parsed.data.stickersDistributed,
+        postersIssued: parsed.data.postersIssued,
         postersDistributed: parsed.data.postersDistributed,
         branchId: parsed.data.branchId || session.user.branchId,
         createdById: session.user.id,
