@@ -31,6 +31,10 @@ interface AppToken {
  * Полный конфиг с провайдером — в lib/auth.ts, используется только в Node.js-рантайме (API-роуты).
  */
 export const authConfig = {
+  // Auth.js по умолчанию доверяет заголовку Host запроса только на Vercel (определяет
+  // это автоматически). На любом другом хостинге (Railway, Render, свой сервер и т.д.)
+  // без этой настройки все запросы к /api/auth/* будут падать с ошибкой "UntrustedHost".
+  trustHost: true,
   session: { strategy: "jwt" },
   pages: { signIn: "/login" },
   providers: [],
