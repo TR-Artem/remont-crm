@@ -6,6 +6,8 @@ export const DEMO_PASSWORDS: Record<string, string> = {
   regional: "eYa9FcEMmQ!Ahf",
   admin: "h#Fj2RLGnML6Hn",
   callcenter: "qkQq4EyLfyuiBm",
+  callcenter2: "Mv7dQp2LkR9xTn",
   master1: "hHMF4u3UY%xXKq",
   master2: "Z48m6ZJPBFu34m",
+  master3: "Pb6wNc4GeJ8yVr",
 };

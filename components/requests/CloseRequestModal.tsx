@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { RequestDTO } from "@/types";
 import { REFUSAL_REASONS } from "@/lib/domain";
 import { uploadFile } from "@/lib/upload-client";
@@ -27,8 +27,16 @@ export default function CloseRequestModal({
   const [masterPercent, setMasterPercent] = useState<number>(request.masterPercent ?? DEFAULT_MASTER_PERCENT);
   const [refusalReason, setRefusalReason] = useState(request.refusalReason ?? "");
   const [files, setFiles] = useState<File[]>([]);
+  const [previews, setPreviews] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Превью выбранных фото: без него непонятно, что именно приложено к заявке.
+  useEffect(() => {
+    const urls = files.map((f) => URL.createObjectURL(f));
+    setPreviews(urls);
+    return () => urls.forEach((url) => URL.revokeObjectURL(url));
+  }, [files]);
 
   const amountNum = parseFloat(amountFull || "0");
   const companyShare = Math.floor((amountNum * (100 - masterPercent)) / 100);
@@ -156,11 +164,21 @@ export default function CloseRequestModal({
                 <img key={d.id} src={d.fileUrl} alt="" className="h-16 w-16 rounded-btn border border-surface-border object-cover" />
               ))}
               {files.map((f, i) => (
-                <div
-                  key={i}
-                  className="flex h-16 w-16 items-center justify-center rounded-btn border border-accent/30 bg-accent-light text-xs text-accent"
-                >
-                  📎
+                <div key={i} className="relative h-16 w-16">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={previews[i] ?? ""}
+                    alt={f.name}
+                    className="h-16 w-16 rounded-btn border border-surface-border object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setFiles((prev) => prev.filter((_, index) => index !== i))}
+                    className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-danger text-xs text-white"
+                    title="Убрать фото"
+                  >
+                    ×
+                  </button>
                 </div>
               ))}
               <label className="flex h-16 w-16 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-btn border border-dashed border-surface-border text-xs text-text-muted hover:border-accent hover:text-accent">

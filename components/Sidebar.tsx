@@ -45,6 +45,9 @@ export default function Sidebar({ role, userName }: { role: Role; userName: stri
             Р
           </div>
           <span className="text-base font-semibold text-white">РемонтCRM</span>
+          <span className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white/60">
+            демо
+          </span>
         </div>
       </div>
       <nav className="flex-1 space-y-1 px-3">

@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { mkdir, writeFile } from "fs/promises";
+import path from "path";
+import { randomUUID } from "crypto";
 import { requireSession, forbiddenResponse, ForbiddenError } from "@/lib/rbac";
 import { put } from "@vercel/blob";
 
@@ -7,6 +10,17 @@ import { put } from "@vercel/blob";
 // отсюда — с сервера Vercel к самому Vercel, по их внутренней сети, а не через интернет
 // пользователя. Это осознанный выбор вместо "прямой загрузки из браузера": в некоторых
 // сетях/регионах устройство пользователя не может напрямую достучаться до API Vercel Blob.
+//
+// Если BLOB_READ_WRITE_TOKEN не задан (локальная разработка, свой сервер), файл кладётся
+// в public/uploads — так главный сценарий «закрыть заявку с фото» работает без облака.
+// На Vercel такой режим бесполезен (файловая система только для чтения), поэтому там
+// без токена возвращаем понятную ошибку, а не молчаливую поломку.
+
+const LOCAL_UPLOADS_DIR = path.join(process.cwd(), "public", "uploads");
+const localUploadsEnabled =
+  !process.env.BLOB_READ_WRITE_TOKEN &&
+  (process.env.NODE_ENV !== "production" || process.env.ALLOW_LOCAL_UPLOADS === "1");
+
 export async function POST(req: NextRequest) {
   try {
     await requireSession();
@@ -17,12 +31,31 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Файл не передан" }, { status: 400 });
     }
 
-    const blob = await put(`uploads/${file.name}`, file, {
-      access: "public",
-      addRandomSuffix: true,
-    });
+    if (process.env.BLOB_READ_WRITE_TOKEN) {
+      const blob = await put(`uploads/${file.name}`, file, {
+        access: "public",
+        addRandomSuffix: true,
+      });
+      return NextResponse.json({ url: blob.url });
+    }
 
-    return NextResponse.json({ url: blob.url });
+    if (!localUploadsEnabled) {
+      return NextResponse.json(
+        {
+          error:
+            "Хранилище фото не настроено: добавьте BLOB_READ_WRITE_TOKEN (Vercel → Storage → Blob). " +
+            "Без него нельзя приложить фото, а статус «Готово» требует фото.",
+        },
+        { status: 503 }
+      );
+    }
+
+    const ext = path.extname(file.name).toLowerCase().replace(/[^.a-z0-9]/g, "") || ".bin";
+    const fileName = `${Date.now()}-${randomUUID().slice(0, 8)}${ext}`;
+    await mkdir(LOCAL_UPLOADS_DIR, { recursive: true });
+    await writeFile(path.join(LOCAL_UPLOADS_DIR, fileName), Buffer.from(await file.arrayBuffer()));
+
+    return NextResponse.json({ url: `/uploads/${fileName}` });
   } catch (e) {
     if (e instanceof ForbiddenError) return forbiddenResponse(e.message);
     console.error(e);

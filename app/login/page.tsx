@@ -3,6 +3,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
+import { DEMO_PASSWORDS } from "@/prisma/demo-passwords";
+
+const DEMO_ACCOUNTS = [
+  { login: "callcenter", role: "Колл-центр" },
+  { login: "master1", role: "Мастер" },
+  { login: "director", role: "Директор" },
+];
 
 export default function LoginPage() {
   const router = useRouter();
@@ -13,9 +20,17 @@ export default function LoginPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    await doLogin(login, password);
+  }
+
+  async function doLogin(loginValue: string, passwordValue: string) {
     setError(null);
     setLoading(true);
-    const res = await signIn("credentials", { login, password, redirect: false });
+    const res = await signIn("credentials", {
+      login: loginValue,
+      password: passwordValue,
+      redirect: false,
+    });
     setLoading(false);
     if (res?.error) {
       setError("Неверный логин или пароль");
@@ -23,6 +38,13 @@ export default function LoginPage() {
     }
     router.push("/");
     router.refresh();
+  }
+
+  function handleDemoLogin(account: (typeof DEMO_ACCOUNTS)[number]) {
+    const demoPassword = DEMO_PASSWORDS[account.login] ?? "";
+    setLogin(account.login);
+    setPassword(demoPassword);
+    void doLogin(account.login, demoPassword);
   }
 
   return (
@@ -65,6 +87,45 @@ export default function LoginPage() {
             {loading ? "Входим…" : "Войти"}
           </button>
         </form>
+
+        <div className="card mt-4 p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-text-muted">
+            Демо-доступы
+          </p>
+          <p className="mt-1 text-xs text-text-secondary">
+            Один клик — и вы в системе под выбранной ролью. Заявки, касса и реклама уже
+            заполнены тестовыми данными.
+          </p>
+          <div className="mt-3 grid gap-2">
+            {DEMO_ACCOUNTS.map((account) => (
+              <button
+                key={account.login}
+                type="button"
+                disabled={loading}
+                onClick={() => handleDemoLogin(account)}
+                className="flex items-center justify-between rounded-btn border border-border bg-white px-3 py-2 text-left text-sm text-text hover:border-accent hover:bg-accent-light disabled:opacity-60"
+              >
+                <span className="font-medium">Войти как {account.role.toLowerCase()}</span>
+                <span className="text-xs text-text-muted">{account.login}</span>
+              </button>
+            ))}
+          </div>
+          <p className="mt-3 text-xs text-text-muted">
+            Пароли демо-аккаунтов открыты в <code>prisma/demo-passwords.ts</code>.
+          </p>
+        </div>
+
+        <p className="mt-4 text-center text-xs text-text-muted">
+          Демо-проект · данные вымышленные ·{" "}
+          <a
+            href="https://github.com/TR-Artem/remont-crm"
+            target="_blank"
+            rel="noreferrer"
+            className="underline hover:text-text-secondary"
+          >
+            исходный код на GitHub
+          </a>
+        </p>
       </div>
     </div>
   );
