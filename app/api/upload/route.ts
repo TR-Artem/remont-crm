@@ -11,14 +11,19 @@ import { put } from "@vercel/blob";
 // пользователя. Это осознанный выбор вместо "прямой загрузки из браузера": в некоторых
 // сетях/регионах устройство пользователя не может напрямую достучаться до API Vercel Blob.
 //
-// Если BLOB_READ_WRITE_TOKEN не задан (локальная разработка, свой сервер), файл кладётся
+// Если BLOB-хранилище не подключено (локальная разработка, свой сервер), файл кладётся
 // в public/uploads — так главный сценарий «закрыть заявку с фото» работает без облака.
 // На Vercel такой режим бесполезен (файловая система только для чтения), поэтому там
-// без токена возвращаем понятную ошибку, а не молчаливую поломку.
+// без хранилища возвращаем понятную ошибку, а не молчаливую поломку.
+//
+// Vercel Blob v2 умеет два вида доступа: статический токен BLOB_READ_WRITE_TOKEN
+// и OIDC (BLOB_STORE_ID + VERCEL_OIDC_TOKEN, который Vercel подставляет сам) —
+// панель Storage по умолчанию подключает именно OIDC.
 
 const LOCAL_UPLOADS_DIR = path.join(process.cwd(), "public", "uploads");
+const blobConfigured = Boolean(process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_STORE_ID);
 const localUploadsEnabled =
-  !process.env.BLOB_READ_WRITE_TOKEN &&
+  !blobConfigured &&
   (process.env.NODE_ENV !== "production" || process.env.ALLOW_LOCAL_UPLOADS === "1");
 
 export async function POST(req: NextRequest) {
@@ -31,7 +36,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Файл не передан" }, { status: 400 });
     }
 
-    if (process.env.BLOB_READ_WRITE_TOKEN) {
+    if (blobConfigured) {
       const blob = await put(`uploads/${file.name}`, file, {
         access: "public",
         addRandomSuffix: true,
@@ -43,7 +48,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           error:
-            "Хранилище фото не настроено: добавьте BLOB_READ_WRITE_TOKEN (Vercel → Storage → Blob). " +
+            "Хранилище фото не настроено: подключите Vercel Blob (Storage → Create → Blob). " +
             "Без него нельзя приложить фото, а статус «Готово» требует фото.",
         },
         { status: 503 }
