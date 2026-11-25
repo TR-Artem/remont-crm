@@ -5,7 +5,7 @@ CRM для службы бытового ремонта: заявки, рекл�
 
 ## Демо
 
-**Демо-стенд:** `https://remont-crm-demo.vercel.app` — ссылка появится после деплоя (шаги ниже).
+**Демо-стенд:** https://remont-crm-eta.vercel.app
 
 Демо-проект: данные вымышленные, реальный клиент не заявлен.
 
@@ -81,7 +81,9 @@ docker run -d --name rc_db -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=remontcr
 
 Загрузка идёт через `POST /api/upload` (файл сжимается в браузере до ~1600 px по длинной стороне).
 
-- **Прод:** Vercel Blob, нужен `BLOB_READ_WRITE_TOKEN`.
+- **Прод:** Vercel Blob. Панель Storage подключает хранилище по OIDC (`BLOB_STORE_ID` +
+  `VERCEL_OIDC_TOKEN`, который Vercel подставляет сам) — статический токен не нужен.
+  Альтернатива — `BLOB_READ_WRITE_TOKEN` в переменных окружения.
 - **Локально:** токен не нужен — файлы кладутся в `public/uploads/` (папка в `.gitignore`).
 - **Прод без токена:** сервер вернёт понятную ошибку `503`, а не молчаливую поломку.
   Для локального `npm start` (production-сборка) локальное хранилище включается
@@ -114,7 +116,7 @@ npx vercel link            # Create new project → remont-crm
 # 3. База: Neon через Vercel Marketplace (DATABASE_URL подставится сам)
 npx vercel install neon    # либо создать базу на neon.com и добавить DATABASE_URL вручную
 
-# 4. Хранилище фото: Blob и подключение к проекту
+# 4. Хранилище фото: Blob и подключение к проекту (доступ по OIDC, статический токен не нужен)
 npx vercel storage create remont-crm-uploads --type blob --access public
 npx vercel storage connect remont-crm-uploads --yes
 ```
@@ -126,8 +128,10 @@ npx vercel env add AUTH_SECRET production
 # либо разом, из файла: npx vercel env add AUTH_SECRET production < secret.txt
 ```
 
-`DATABASE_URL` и `BLOB_READ_WRITE_TOKEN` появляются автоматически после шагов 3–4.
-`NEXTAUTH_URL` не обязателен: `trustHost: true` уже включён, Vercel подставляет домен сам.
+`DATABASE_URL` и `BLOB_STORE_ID` появляются автоматически после шагов 3–4.
+`NEXTAUTH_URL`/`AUTH_URL` не обязательны: `trustHost: true` уже включён, Vercel подставляет
+домен сам. Если домен всё же прописан неверно (редирект после входа уходит на localhost) —
+добавьте `AUTH_URL` с боевым адресом.
 
 Таблицы и демо-данные в прод-базе (один раз, локально с прод-строкой подключения):
 
