@@ -21,7 +21,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const password = credentials?.password as string | undefined;
         if (!login || !password) return null;
 
-        const user = await prisma.user.findUnique({ where: { login } });
+        // passwordHash скрыт глобально (lib/prisma.ts) — здесь единственное место,
+        // где хеш действительно нужен, поэтому явно возвращаем его в выборке.
+        const user = await prisma.user.findUnique({
+          where: { login },
+          omit: { passwordHash: false },
+        });
         if (!user) return null;
 
         const valid = await bcrypt.compare(password, user.passwordHash);
