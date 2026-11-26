@@ -100,7 +100,12 @@ docker run -d --name rc_db -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=remontcr
 строка подключения вида `postgresql://user:password@ep-xxx.neon.tech/neondb?sslmode=require`.
 
 Сид одноразовый: повторный запуск на заполненной базе ничего не дублирует и просто выходит.
-Пересоздать демо-данные с нуля — `SEED_RESET=1 npm run db:seed`.
+Пересоздать демо-данные с нуля — `npm run db:refresh` (то же, что `SEED_RESET=1 npm run db:seed`).
+
+Даты в сиде считаются от момента запуска: «свежие» заявки создаются 25–150 минут назад
+(попадают в 24-часовое окно правки), выезды «в пути» — через час-полтора, «в работе» —
+начались недавно. Поэтому после долгого простоя демо-стенда данные достаточно пересоздать,
+а не править вручную: `DATABASE_URL="<прод>" npm run db:refresh`.
 
 ## Деплой: Vercel + Neon + Blob
 
@@ -224,5 +229,6 @@ npm run lint           # eslint
 npm run db:generate    # prisma generate
 npm run db:push        # создать/обновить таблицы по текущей схеме
 npm run db:seed        # заполнить демо-данными (повторный запуск не дублирует)
+npm run db:refresh     # пересоздать демо-данные с нуля (SEED_RESET=1) — освежает даты
 npm run db:setup       # generate + push + seed
 ```

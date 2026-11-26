@@ -16,6 +16,16 @@ function daysAhead(days: number, hour = 10, minute = 0): Date {
   return daysAgo(-days, hour, minute);
 }
 
+/**
+ * Дата N часов от момента запуска сида (минус — в прошлом, плюс — в будущем).
+ * Нужна для «живого» демо: свежие заявки должны попадать в 24-часовое окно правки,
+ * а выезды — быть на текущий день, а не в прошлом. Фиксированные часы (09:15, 14:30)
+ * через сутки после сида превращаются в «31 ч назад» и просроченные выезды.
+ */
+function hoursFromNow(hours: number): Date {
+  return new Date(Date.now() + hours * 60 * 60 * 1000);
+}
+
 /** Полная очистка демо-данных перед повторным сидом (SEED_RESET=1). */
 async function resetDemoData() {
   await prisma.chatMessage.deleteMany();
@@ -151,6 +161,8 @@ async function main() {
     branchId: string;
     createdById: string;
     createdDaysAgo: number;
+    /** Для «свежих» заявок: создать N минут назад от момента сида (приоритетнее createdDaysAgo). */
+    createdMinutesAgo?: number;
     visitAt?: Date;
     closed?: { daysAgo: number; byId: string; closeStatus: "done" | "refused"; amountFull?: number; amountRecorded?: number; masterPercent?: number; refusalReason?: string };
   }> = [
@@ -165,6 +177,7 @@ async function main() {
       branchId: branch.id,
       createdById: callcenter.id,
       createdDaysAgo: 0,
+      createdMinutesAgo: 25,
     },
     {
       clientName: "Павел Григорьев",
@@ -176,6 +189,7 @@ async function main() {
       branchId: branch.id,
       createdById: callcenter.id,
       createdDaysAgo: 0,
+      createdMinutesAgo: 70,
     },
     {
       clientName: "Ирина Мельникова",
@@ -198,6 +212,7 @@ async function main() {
       branchId: branch2.id,
       createdById: callcenter2.id,
       createdDaysAgo: 0,
+      createdMinutesAgo: 150,
     },
     // Москва — в пути
     {
@@ -211,7 +226,7 @@ async function main() {
       branchId: branch.id,
       createdById: callcenter.id,
       createdDaysAgo: 1,
-      visitAt: daysAhead(0, 14, 30),
+      visitAt: hoursFromNow(0.5),
     },
     {
       clientName: "Ольга Никитина",
@@ -224,7 +239,7 @@ async function main() {
       branchId: branch.id,
       createdById: callcenter.id,
       createdDaysAgo: 1,
-      visitAt: daysAhead(0, 16, 0),
+      visitAt: hoursFromNow(1.25),
     },
     // Москва — в работе
     {
@@ -238,7 +253,7 @@ async function main() {
       branchId: branch.id,
       createdById: callcenter.id,
       createdDaysAgo: 2,
-      visitAt: daysAhead(0, 10, 0),
+      visitAt: hoursFromNow(-0.75),
     },
     {
       clientName: "Наталья Белова",
@@ -251,7 +266,7 @@ async function main() {
       branchId: branch.id,
       createdById: admin.id,
       createdDaysAgo: 2,
-      visitAt: daysAhead(0, 12, 0),
+      visitAt: hoursFromNow(-0.4),
     },
     {
       clientName: "Роман Асташов",
@@ -264,7 +279,7 @@ async function main() {
       branchId: branch2.id,
       createdById: callcenter2.id,
       createdDaysAgo: 1,
-      visitAt: daysAhead(0, 15, 0),
+      visitAt: hoursFromNow(-0.6),
     },
     // Москва — в работе СД (сложные)
     {
@@ -390,7 +405,10 @@ async function main() {
 
   const createdRequests = [];
   for (const item of requestSeed) {
-    const createdAt = daysAgo(item.createdDaysAgo, 9, 15);
+    const createdAt =
+      item.createdMinutesAgo != null
+        ? new Date(Date.now() - item.createdMinutesAgo * 60 * 1000)
+        : daysAgo(item.createdDaysAgo, 9, 15);
     const closedAt = item.closed ? daysAgo(item.closed.daysAgo, 18, 40) : null;
     const request = await prisma.request.create({
       data: {
